@@ -12,15 +12,15 @@
 #define SW_PIN 9
 #define LAST_KNOWN_SIGNAL LOW
 #define BRIGHTNESS_MODIFIER 5
-volatile int ROTARY_POS = 0;
 int mrotateLast;
 int mrotate;
 int positionval;
 bool switchval;
 unsigned int LIGHT_CONFIG = 0;
-unsigned int RED = 0;
-unsigned int BLUE = 100;
-unsigned int GREEN = 225;
+volatile unsigned int BRIGHTNESS = 0;
+volatile unsigned int RED = 0;
+volatile unsigned int BLUE = 100;
+volatile unsigned int GREEN = 225;
 
 Adafruit_NeoPixel pixels(NUMPIXELS, RGB_PIN, NEO_GRB + NEO_KHZ800);
 EncoderButton eb1(SW_PIN);
@@ -34,44 +34,63 @@ void setup() {
   pinMode(ENCODER_PIN_B, INPUT);
   digitalWrite(ENCODER_PIN_A, RISING);       // turn on pullup resistor
   digitalWrite(ENCODER_PIN_B, RISING);       // turn on pullup resistor
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), readencoder, HIGH);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), readEncoder, HIGH);
   int mrotateLast = digitalRead(ENCODER_PIN_A);
   eb1.setClickHandler(incrementLightConfig);
   Serial.begin (115200);
   delay(10);
 }
-void readencoder(){
-  // TODO: Replace this with EncoderButton library
+void readEncoder(){
   cli();
   mrotate = digitalRead(ENCODER_PIN_A);
   if (mrotate != mrotateLast) { //knob is rotating
       if (digitalRead(ENCODER_PIN_B) != mrotate) {  //switch A changed first -> rotating clockwise
       Serial.println ("rotated clockwise");
-      ROTARY_POS += BRIGHTNESS_MODIFIER;
-      if (ROTARY_POS > ROTARY_MAX) ROTARY_POS = 255;
+      changeComponent(LIGHT_CONFIG, 1);
     }
     else {// switch B changed first -> rotating counterclockwise
-      ROTARY_POS -= BRIGHTNESS_MODIFIER;
-      if (ROTARY_POS < ROTARY_MIN) ROTARY_POS = 0;
       Serial.println ("rotated counterclockwise");
+      changeComponent(LIGHT_CONFIG, -1);
     }
-    Serial.print("Encoder Position: ");
-    Serial.println(ROTARY_POS);
-    Serial.println("");
   }
   mrotateLast = mrotate;
   sei();
- }
+}
+
+void changeComponent(int component, int changeValue){
+  switch (component) {
+    case 1:
+      Serial.print("changing RED");
+      RED = boundaryCheck(RED += changeValue, ROTARY_MIN, ROTARY_MAX);
+      break;
+     case 2:
+      Serial.print("changing BLUE");
+      BLUE = boundaryCheck(BLUE += changeValue, ROTARY_MIN, ROTARY_MAX);
+      break;
+    case 3:
+      Serial.print("changing GREEN");
+      GREEN = boundaryCheck(GREEN += changeValue, ROTARY_MIN, ROTARY_MAX);
+      break;
+    case 4:
+      Serial.print("changing BRIGHTNESS");
+      BRIGHTNESS = boundaryCheck(BRIGHTNESS += changeValue, ROTARY_MIN, ROTARY_MAX);
+      break;
+   default:
+      Serial.print("should not reach, error");
+      break;
+  }
+//
+}
+
+int boundaryCheck(int valueToCheck, int _min, int _max){
+  if (valueToCheck > _max) return _max;
+  if (valueToCheck < _min) return _min;
+  return valueToCheck;
+}
 
 void incrementLightConfig(){
   Serial.print("eb1 clickCount: ");
   Serial.println(eb1.clickCount());
-  // TODO: Update this to use a switch statement for configuring which component to change:
-    // 0: RED
-    // 1: GREEN
-    // 2: BLUE
-    // 3: BRIGHTNESS
-  // Also need to add in support for double clicks to move to effects and long click to reset color to default
   if (LIGHT_CONFIG >= 3){
     Serial.println("restting LIGHT_CONFIG");
     LIGHT_CONFIG = 0;
@@ -92,5 +111,5 @@ void loop() {
     pixels.setPixelColor(i, pixels.Color(RED, GREEN, BLUE));
     pixels.show();
   }
-  pixels.setBrightness(ROTARY_POS);
+  pixels.setBrightness(BRIGHTNESS);
 }
