@@ -1,10 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <EncoderButton.h>
 
-//#ifdef __AVR__
-//#include <avr/power.h>
-//#endif
-
 // setup RAM FUNC
 void ICACHE_RAM_ATTR readEncoder();
 void ICACHE_RAM_ATTR changeComponent(int component, int changeValue);
@@ -15,8 +11,10 @@ int ICACHE_RAM_ATTR boundaryCheck(int valueToCheck, int _min, int _max);
 // setup pins
 const uint8_t ENCODER_PIN_A = 5;
 const uint8_t ENCODER_PIN_B = 4;
-const uint8_t SW_PIN = 13;
-const uint8_t RGB_PIN = 14;
+const uint8_t SW_PIN = 6;
+const uint8_t RGB_PIN = 3;
+
+#define TEST_BUILT_IN "test"
 
 // setup constants
 const int INC_DEC_MOD = 5;
@@ -39,14 +37,16 @@ bool switchval;
 Adafruit_NeoPixel pixels(NUM_PIXELS, RGB_PIN, NEO_GRB + NEO_KHZ800);
 EncoderButton eb1(ENCODER_PIN_A, ENCODER_PIN_B, SW_PIN);
 
-void handleEncoder(EncoderButton& eb){
+void handleEncoder(EncoderButton &eb)
+{
   Serial.print("encoder rotation: ");
   int changeValue = eb.increment();
   Serial.println(changeValue);
-  changeComponent(LIGHT_CONFIG, changeValue*INC_DEC_MOD);
+  changeComponent(LIGHT_CONFIG, changeValue * INC_DEC_MOD);
 }
 
-void setup(){
+void setup()
+{
   Serial.begin(115200);
   delay(10);
   Serial.println("setup...");
@@ -56,7 +56,6 @@ void setup(){
   eb1.setEncoderHandler(handleEncoder);
   Serial.println("..complete");
 }
-
 
 void changeComponent(int component, int changeValue)
 {
@@ -86,7 +85,8 @@ void changeComponent(int component, int changeValue)
   //
 }
 
-void printStuff(String prefix, int suffix){
+void printStuff(String prefix, int suffix)
+{
   Serial.println(prefix);
   Serial.println(suffix);
 }
@@ -100,7 +100,7 @@ int boundaryCheck(int valueToCheck, int _min, int _max)
   return valueToCheck;
 }
 
-void incrementLightConfig(EncoderButton& eb1)
+void incrementLightConfig(EncoderButton &eb1)
 {
   int clicks = eb1.clickCount();
   Serial.print("eb1 clickCount: ");
@@ -119,13 +119,15 @@ void incrementLightConfig(EncoderButton& eb1)
     Serial.print("LIGHT_CONFIG IS position is: ");
     Serial.println(LIGHT_CONFIG);
   }
-  if (clicks == 3){
+  if (clicks == 3)
+  {
     Serial.println("setting BRIGHTNESS to 0");
     BRIGHTNESS = 0;
   }
 }
 
-void setColors(int _red, int _green, int _blue, int _len){
+void setColors(int _red, int _green, int _blue, int _len)
+{
   for (int i = 0; i < NUM_PIXELS; i++)
   {
     pixels.setPixelColor(i, pixels.Color(RED, GREEN, BLUE));
@@ -134,8 +136,31 @@ void setColors(int _red, int _green, int _blue, int _len){
 }
 void loop()
 {
+#ifdef TEST_BUILT_IN
+  loopBuiltin();
+#endif
   eb1.update();
   pixels.clear();
   setColors(RED, GREEN, BLUE, NUM_PIXELS);
   pixels.setBrightness(BRIGHTNESS);
+}
+
+void loopBuiltin()
+{
+  const int rgbPin = 7;
+  const int rgbBrightness = 255;
+
+  digitalWrite(rgbPin, HIGH); // Turn the RGB LED white
+  delay(1000);
+  digitalWrite(rgbPin, LOW); // Turn the RGB LED off
+  delay(1000);
+
+  rgbLedWrite(rgbPin, rgbBrightness, 0, 0); // Red
+  delay(1000);
+  rgbLedWrite(rgbPin, 0, rgbBrightness, 0); // Green
+  delay(1000);
+  rgbLedWrite(rgbPin, 0, 0, rgbBrightness); // Blue
+  delay(1000);
+  rgbLedWrite(rgbPin, 0, 0, 0); // Off / black
+  delay(1000);
 }
